@@ -1,6 +1,7 @@
-import  { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Filter, Grid, List, SlidersHorizontal, Heart } from 'lucide-react';
 import { useMockDataStore } from '@/store/mockDataStore';
+import { useWatchlistStore } from '@/store/watchlistStore';
 import { Button } from '@/components/ui/Button';
 import { AssetCategory, Asset } from '@/types';
 import { CategoryFilter } from '@/components/marketplace/CategoryFilter';
@@ -17,6 +18,7 @@ const sortOptions = [
 
 export default function MarketplacePage() {
   const { assets, loading, loadMoreAssets, filterAssets } = useMockDataStore();
+  const { watchlist, isFavFilter, setFavFilter, fetchWatchlist } = useWatchlistStore();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,41 +32,39 @@ export default function MarketplacePage() {
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>(assets);
 
   useEffect(() => {
-    // Start with all assets
+    fetchWatchlist();
+  }, []);
+
+  useEffect(() => {
     let result = [...assets];
-    
-    // Apply category and price range filters first
     result = filterAssets(selectedCategory, priceRange, verifiedOnly);
     
-    // Then apply search filter if there's a search query
     if (searchQuery.trim()) {
       result = result.filter(asset => 
         asset.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         asset.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+
+    // FAVORITES ONLY FILTER
+    if (isFavFilter) {
+      result = result.filter(asset => watchlist.includes(asset.id));
+    }
     
-    // Finally apply sorting
     result = sortAssets(result, sortOption);
-    
     setFilteredAssets(result);
-  }, [assets, searchQuery, selectedCategory, priceRange, verifiedOnly, sortOption]);
+  }, [assets, searchQuery, selectedCategory, priceRange, verifiedOnly, sortOption, isFavFilter, watchlist]);
 
   const sortAssets = (assetsToSort: Asset[], sortBy: string) => {
     switch (sortBy) {
-      case 'price-low-high':
-        return [...assetsToSort].sort((a, b) => a.price.amount - b.price.amount);
-      case 'price-high-low':
-        return [...assetsToSort].sort((a, b) => b.price.amount - a.price.amount);
-      case 'ending-soon':
-        return [...assetsToSort].sort((a, b) => {
+      case 'price-low-high': return [...assetsToSort].sort((a, b) => a.price.amount - b.price.amount);
+      case 'price-high-low': return [...assetsToSort].sort((a, b) => b.price.amount - a.price.amount);
+      case 'ending-soon': return [...assetsToSort].sort((a, b) => {
           if (!a.auctionEndTime) return 1;
           if (!b.auctionEndTime) return -1;
           return new Date(a.auctionEndTime).getTime() - new Date(b.auctionEndTime).getTime();
         });
-      case 'newest':
-      default:
-        return assetsToSort;
+      default: return assetsToSort;
     }
   };
 
@@ -73,113 +73,44 @@ export default function MarketplacePage() {
       <div className="container-custom py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-primary-800">Marketplace</h1>
-          <p className="text-neutral-600 mt-2">
-            Explore our collection of tokenized real-world assets
-          </p>
+          <p className="text-neutral-600 mt-2">Explore our collection of tokenized real-world assets</p>
         </div>
 
-        {/* Search and Filter Bar */}
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search assets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+            <input type="text" placeholder="Search assets..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <Filter size={20} />
-              Filters
+            <Button onClick={() => setFavFilter(!isFavFilter)} variant={isFavFilter ? "primary" : "outline"} className="flex items-center gap-2">
+              <Heart size={20} fill={isFavFilter ? "white" : "none"} />
+              Favorites ({watchlist.length})
             </Button>
+            <Button onClick={() => setIsFilterOpen(!isFilterOpen)} variant="outline" className="flex items-center gap-2"><Filter size={20} />Filters</Button>
             <div className="hidden md:flex items-center gap-2">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600 hover:bg-neutral-100'}`}
-              >
-                <Grid size={20} />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600 hover:bg-neutral-100'}`}
-              >
-                <List size={20} />
-              </button>
+              <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md ${viewMode === 'grid' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600'}`}><Grid size={20} /></button>
+              <button onClick={() => setViewMode('list')} className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600'}`}><List size={20} /></button>
             </div>
-            <div className="flex-1 md:flex-none ml-auto">
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value as any)}
-                className="w-full md:w-auto px-3 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-              >
-                {sortOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select value={sortOption} onChange={(e) => setSortOption(e.target.value as any)} className="w-full md:w-auto px-3 py-2 rounded-lg border border-neutral-200 bg-white">
+              {sortOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+            </select>
           </div>
         </div>
 
-        {/* Mobile Filter Button */}
         <div className="md:hidden mb-4">
-          <Button
-            onClick={() => setIsMobileFilterOpen(true)}
-            variant="outline"
-            className="w-full flex items-center justify-center gap-2"
-          >
-            <SlidersHorizontal size={18} />
-            Show All Filters
-          </Button>
+          <Button onClick={() => setIsMobileFilterOpen(true)} variant="outline" className="w-full flex items-center justify-center gap-2"><SlidersHorizontal size={18} />Show All Filters</Button>
         </div>
 
-        {/* Category Filter */}
-        <CategoryFilter 
-          selectedCategory={selectedCategory} 
-          onCategoryChange={setSelectedCategory} 
-        />
+        <CategoryFilter selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
 
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Desktop Filters */}
-          <MarketplaceFilters
-            isOpen={isFilterOpen}
-            onClose={() => setIsFilterOpen(false)}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-                    priceRange={priceRange} 
-            onPriceRangeChange={setPriceRange}
-            verifiedOnly={verifiedOnly}
-            onVerifiedChange={setVerifiedOnly}
-            selectedConditions={selectedConditions}
-            onConditionChange={setSelectedConditions}
-          />
-
-          {/* Asset Grid */}
+          <MarketplaceFilters isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} priceRange={priceRange} onPriceRangeChange={setPriceRange} verifiedOnly={verifiedOnly} onVerifiedChange={setVerifiedOnly} selectedConditions={selectedConditions} onConditionChange={setSelectedConditions} />
           <div className="flex-1">
-            <AssetGrid
-              assets={filteredAssets}
-              viewMode={viewMode}
-              loading={loading}
-              onLoadMore={loadMoreAssets}
-              onQuickView={setQuickViewAsset}
-            />
+            <AssetGrid assets={filteredAssets} viewMode={viewMode} loading={loading} onLoadMore={loadMoreAssets} onQuickView={setQuickViewAsset} />
           </div>
         </div>
       </div>
-
-      {/* Quick View Modal */}
-      <QuickViewModal
-        asset={quickViewAsset}
-        onClose={() => setQuickViewAsset(null)}
-      />
+      <QuickViewModal asset={quickViewAsset} onClose={() => setQuickViewAsset(null)} />
     </div>
   );
 }

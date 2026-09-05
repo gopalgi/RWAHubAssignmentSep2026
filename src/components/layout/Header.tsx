@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, ExternalLink } from 'lucide-react';
+import { Menu, X, LogOut, ExternalLink, Heart } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedLogo } from '../AnimatedLogo';
 import { useAuthStore } from '@/store/authStore';
+import { useWatchlistStore } from '@/store/watchlistStore';
 import { AuthModal } from '../AuthModal';
 
 // Assuming AnimatedLogoProps is defined elsewhere and includes className
@@ -20,6 +21,7 @@ export const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout, loading } = useAuthStore();
+  const { watchlist, isFavFilter, setFavFilter } = useWatchlistStore();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -55,10 +57,29 @@ export const Header = () => {
     }
   };
 
+  const handleFavClick = () => {
+  if (location.pathname !== '/marketplace') {
+    setFavFilter(true);
+    navigate('/marketplace');
+  } else {
+    setFavFilter(!isFavFilter);
+  }
+  setIsMobileMenuOpen(false);
+};
+
   const renderAuthButton = () => {
     if (isAuthenticated) {
       return (
         <div className="flex items-center gap-4">
+          <button
+            onClick={handleFavClick}
+            className="relative flex items-center gap-1 text-sm text-neutral-600 hover:text-blue-600"
+          >
+            <Heart size={18} className={watchlist.length > 0? "fill-red-500 text-red-500" : ""} />
+            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              {watchlist.length}
+            </span>
+          </button>
           <Link
             to="/dashboard"
             className="text-sm text-neutral-600 hover:text-blue-600"
@@ -72,13 +93,26 @@ export const Header = () => {
             className="flex items-center gap-2"
           >
             <LogOut size={16} />
-            {isLoggingOut ? 'Logging out...' : 'Logout'}
+            {isLoggingOut? 'Logging out...' : 'Logout'}
           </Button>
         </div>
       );
     }
 
-    return <Button onClick={handleOpenAuthModal}>Sign In</Button>;
+    return (
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleFavClick}
+          className="relative flex items-center gap-1 text-sm text-neutral-600 hover:text-blue-600"
+        >
+          <Heart size={18} className={watchlist.length > 0? "fill-red-500 text-red-500" : ""} />
+          <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+            {watchlist.length}
+          </span>
+        </button>
+        <Button onClick={handleOpenAuthModal}>Sign In</Button>
+      </div>
+    );
   };
 
   const navItems = [
@@ -89,7 +123,7 @@ export const Header = () => {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-200 ${
-        isScrolled ? 'bg-white shadow-sm' : 'bg-transparent'
+        isScrolled? 'bg-white shadow-sm' : 'bg-transparent'
       }`}
     >
       <div className="container-custom">
@@ -105,7 +139,7 @@ export const Header = () => {
           <nav className="hidden md:flex flex-1 justify-center items-center">
             <div className="flex items-center gap-8">
               {navItems.map((item) =>
-                item.isExternal ? (
+                item.isExternal? (
                   <a
                     key={item.path}
                     href={item.path}
@@ -122,7 +156,7 @@ export const Header = () => {
                     to={item.path}
                     className={`text-sm ${
                       location.pathname === item.path
-                        ? 'text-blue-600 font-medium'
+                       ? 'text-blue-600 font-medium'
                         : 'text-neutral-600 hover:text-blue-600'
                     }`}
                   >
@@ -140,9 +174,9 @@ export const Header = () => {
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 text-neutral-600 hover:text-blue-600"
-              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={isMobileMenuOpen? 'Close menu' : 'Open menu'}
             >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {isMobileMenuOpen? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
@@ -160,7 +194,7 @@ export const Header = () => {
             <div className="container-custom py-4">
               <nav className="flex flex-col gap-4 text-center">
                 {navItems.map((item) =>
-                  item.isExternal ? (
+                  item.isExternal? (
                     <a
                       key={item.path}
                       href={item.path}
@@ -177,7 +211,7 @@ export const Header = () => {
                       to={item.path}
                       className={`text-sm ${
                         location.pathname === item.path
-                          ? 'text-blue-600 font-medium'
+                         ? 'text-blue-600 font-medium'
                           : 'text-neutral-600 hover:text-blue-600'
                       }`}
                     >

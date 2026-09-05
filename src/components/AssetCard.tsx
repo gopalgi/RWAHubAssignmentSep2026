@@ -1,10 +1,10 @@
-import { Check } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Check, Heart } from 'lucide-react';
 import { Asset } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { useWatchlistStore } from '@/store/watchlistStore';
 
 interface AssetCardProps {
   asset: Asset;
@@ -14,6 +14,8 @@ interface AssetCardProps {
 
 export const AssetCard = ({ asset, onQuickView, onBuyClick }: AssetCardProps) => {
   const { title, category, price, imageUrl, isVerified, listingType, auctionEndTime } = asset;
+  const { toggleWatchlist, isFavorite } = useWatchlistStore();
+  const isFav = isFavorite(asset.id);
 
   const getActionButton = () => {
     switch (listingType) {
@@ -40,6 +42,17 @@ export const AssetCard = ({ asset, onQuickView, onBuyClick }: AssetCardProps) =>
             alt={title} 
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
           />
+          {/* FAVORITE BUTTON */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleWatchlist(asset.id);
+            }}
+            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-md hover:bg-white transition-all"
+          >
+            <Heart size={18} className={isFav ? "fill-red-500 text-red-500" : "text-gray-600"} />
+          </button>
+
           {isVerified && (
             <div className="validator-badge shadow-md">
               <Check size={16} />

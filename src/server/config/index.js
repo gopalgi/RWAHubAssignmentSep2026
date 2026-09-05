@@ -1,3 +1,4 @@
+app.use(require('./routes/watchlist'));
 const path = require('path');
 
 // Base configuration
